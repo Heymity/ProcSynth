@@ -5,7 +5,7 @@
 #ifndef SYNTH_H
 #define SYNTH_H
 
-#define SAMPLE_RATE 44100
+#define SAMPLE_RATE 48000
 #define MAX_VOLUME 32767
 #define CHANNELS 2
 

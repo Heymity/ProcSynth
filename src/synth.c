@@ -3,19 +3,24 @@
 #include <math.h>
 #include <alsa/asoundlib.h>
 #include <procSynth/synth.h>
+#include <procSynth/voice.h>
 
-#define DURATION_SEC 40.0/1000.0
+#define DURATION_SEC (40.0/1000.0)
 #define FREQUENCY 440.0
 #define VOLUME 30000.0 // Max for 16-bit signed is 32767
 
+#define VOICES_NUM 100
+
+static Voice voices[VOICES_NUM] = {};
 
 void write_buffer(snd_pcm_t* playback_handle, short* buffer, const long length) {
-	int frames_written = snd_pcm_writei(playback_handle, buffer, length);
+	snd_pcm_sframes_t frames_written = snd_pcm_writei(playback_handle, buffer, length);
 	if (frames_written < 0) {
-		frames_written = snd_pcm_recover(playback_handle, frames_written, 0);
+		frames_written = snd_pcm_recover(playback_handle, (int)frames_written, 0);
+		if (frames_written < 0) {
+			printf("Error: %s\n", snd_strerror((int)frames_written));
+		}
 	}
-
-	free(buffer);
 }
 
 void close_and_drain(snd_pcm_t* playback_handle) {
@@ -36,7 +41,7 @@ int open_and_configure_interface(snd_pcm_t** playback_handle) {
 							 SND_PCM_ACCESS_RW_INTERLEAVED,
 							 CHANNELS,
 							 SAMPLE_RATE,
-							 1,      // Allow software resampling
+							 1,			// Allow software resampling
 							 20000); // 20ms latency for real time
 	if (err < 0) {
 		fprintf(stderr, "Playback configuration error: %s\n", snd_strerror(err));
@@ -50,35 +55,115 @@ int open_and_configure_interface(snd_pcm_t** playback_handle) {
 void synth() {
 	snd_pcm_t *playback_handle;
 
-	if (open_and_configure_interface(&playback_handle) != 0) {
+	if (open_and_configure_interface(&playback_handle) != 0)
 		return;
+
+	for (int i = 1; i < VOICES_NUM; i++) {
+		reset_voice(&voices[i]);
 	}
 
-	double phase = 0.0;
+	voices[0] = (Voice) {
+		.voiceNumber = 0,
+		.frequency = 440,
+		.active = true,
 
-	for (int j = 0; j < 1000; j++) {
-		const int total_frames = (int)(SAMPLE_RATE * DURATION_SEC);
-		short *buffer = malloc(total_frames * CHANNELS * sizeof(short));
-		const double current_freq = FREQUENCY + j;
-		for (int i = 0; i < total_frames; i++) {
-			const double current_amp = VOLUME;
-			const short sample = (short)(current_amp * sin(phase));
+		.baseAmplitude = 7500,
+		.attack_time = 0.05,
+		.attack_overshoot = .5,
+		.pressed = true,
+		.decay_time = 12,
+		.sustain_level = 0,
+		.release_time = .1,
+		.envelopeMultiplier = 1.0,
+		.decay_type = LINEAR_DECAY
+	};
 
-			// Incrementa a fase continuamente
-			double phase_increment = (2.0 * M_PI * current_freq) / SAMPLE_RATE;
-			phase += phase_increment;
+	voices[1] = (Voice) {
+		.voiceNumber = 1,
+		.frequency = 440 * exp2(4.0/12.0),
+		.active = false,
 
-			// Evita que a variável phase cresça infinitamente
-			if (phase >= 2.0 * M_PI) {
-				phase -= 2.0 * M_PI;
+		.baseAmplitude = 4500,
+		.attack_time = 0.05,
+		.attack_overshoot = .5,
+		.pressed = false,
+		.decay_time = 12,
+		.sustain_level = 0,
+		.release_time = .1,
+		.envelopeMultiplier = 1.0,
+		.decay_type = LINEAR_DECAY
+	};
+
+	voices[2] = (Voice) {
+		.voiceNumber = 2,
+		.frequency = 440 * exp2(7.0/12.0),
+		.active = false,
+
+		.baseAmplitude = 6000,
+		.attack_time = 0.05,
+		.attack_overshoot = .5,
+		.pressed = false,
+		.decay_time = 12,
+		.sustain_level = 0,
+		.release_time = .1,
+		.envelopeMultiplier = 1.0,
+		.decay_type = LINEAR_DECAY
+	};
+
+	voices[3] = (Voice) {
+		.voiceNumber = 3,
+		.frequency = 440 * exp2(12.0/12.0),
+		.active = false,
+
+		.baseAmplitude = 2000,
+		.attack_time = 0.05,
+		.attack_overshoot = .5,
+		.pressed = false,
+		.decay_time = 12,
+		.sustain_level = 0,
+		.release_time = .1,
+		.envelopeMultiplier = 1.0,
+		.decay_type = LINEAR_DECAY
+	};
+
+	const int total_frames = SAMPLE_RATE * 0.1;
+	short *buffer = malloc(total_frames * CHANNELS * sizeof(short));
+	short *loc_buffer = malloc(total_frames * CHANNELS * sizeof(short));
+
+	for (int i = 0; i < total_frames * CHANNELS; i++) {
+		buffer[i] = 0;
+		loc_buffer[i] = 0;
+	}
+
+	int i = 0;
+	while (true){
+		i++;
+		//if (i++ > 50) voices[0].pressed = false;
+
+		if (i % 15 == 0) {
+			voices[i / 15].active = true;
+			voices[i / 15].pressed = true;
+		}
+
+		for (int j = 0; j < VOICES_NUM; j++) {
+			if (!voices[j].active) continue;
+
+			synth_voice(&voices[j], loc_buffer, total_frames * CHANNELS);
+
+			for (int k = 0; k < total_frames * CHANNELS; k++) {
+				if (buffer[k] + loc_buffer[k] > MAX_VOLUME) buffer[k] = MAX_VOLUME;
+				else buffer[k] = (short)(buffer[k] + loc_buffer[k]);
 			}
-
-			buffer[i * 2] = sample;     // Left channel
-			buffer[i * 2 + 1] = sample; // Right channel
 		}
 
 		write_buffer(playback_handle, buffer, total_frames);
+
+		for (int j = 0; j < total_frames * CHANNELS; j++) {
+			buffer[j] = 0;
+		}
 	}
 
+	free(buffer);
+	free(loc_buffer);
 	close_and_drain(playback_handle);
 }

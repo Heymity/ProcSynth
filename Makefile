@@ -11,7 +11,7 @@ endif
 # Options: x86_64, x86, rpi3
 TARGET_ARCH ?= x86_64
 
-CFLAGS = -I./include -Wall -Wextra
+CFLAGS = -I./include -Wall -Wextra -O3
 
 # 3. SET COMPILER AND FLAGS BASED ON ARCHITECTURE
 ifeq ($(TARGET_ARCH),rpi3)
