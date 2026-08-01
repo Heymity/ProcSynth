@@ -4,6 +4,7 @@
 #include <alsa/asoundlib.h>
 #include <procSynth/synth.h>
 #include <procSynth/voice.h>
+#include <procSynth/presets.h>
 
 #define DURATION_SEC (40.0/1000.0)
 #define FREQUENCY 440.0
@@ -13,7 +14,7 @@
 
 static Voice voices[VOICES_NUM] = {};
 
-void write_buffer(snd_pcm_t* playback_handle, short* buffer, const long length) {
+void write_buffer(snd_pcm_t* playback_handle, const short * buffer, const long length) {
 	snd_pcm_sframes_t frames_written = snd_pcm_writei(playback_handle, buffer, length);
 	if (frames_written < 0) {
 		frames_written = snd_pcm_recover(playback_handle, (int)frames_written, 0);
@@ -64,66 +65,46 @@ void synth() {
 
 	voices[0] = (Voice) {
 		.voiceNumber = 0,
-		.frequency = 440,
+		.frequency = NOTE_C4,
 		.active = true,
 
 		.baseAmplitude = 7500,
-		.attack_time = 0.05,
-		.attack_overshoot = .5,
 		.pressed = true,
-		.decay_time = 12,
-		.sustain_level = 0,
-		.release_time = .1,
-		.envelopeMultiplier = 1.0,
-		.decay_type = LINEAR_DECAY
+
+		.envelope = PianoEnvelope_Preset
 	};
 
 	voices[1] = (Voice) {
 		.voiceNumber = 1,
-		.frequency = 440 * exp2(4.0/12.0),
+		.frequency = NOTE_E4,
 		.active = false,
 
 		.baseAmplitude = 4500,
-		.attack_time = 0.05,
-		.attack_overshoot = .5,
 		.pressed = false,
-		.decay_time = 12,
-		.sustain_level = 0,
-		.release_time = .1,
-		.envelopeMultiplier = 1.0,
-		.decay_type = LINEAR_DECAY
+
+		.envelope = ViolinEnvelope_Preset
 	};
 
 	voices[2] = (Voice) {
 		.voiceNumber = 2,
-		.frequency = 440 * exp2(7.0/12.0),
+		.frequency = NOTE_G4,
 		.active = false,
 
 		.baseAmplitude = 6000,
-		.attack_time = 0.05,
-		.attack_overshoot = .5,
 		.pressed = false,
-		.decay_time = 12,
-		.sustain_level = 0,
-		.release_time = .1,
-		.envelopeMultiplier = 1.0,
-		.decay_type = LINEAR_DECAY
+
+		.envelope = PianoEnvelope_Preset
 	};
 
 	voices[3] = (Voice) {
 		.voiceNumber = 3,
-		.frequency = 440 * exp2(12.0/12.0),
+		.frequency = NOTE_C4*2,
 		.active = false,
 
 		.baseAmplitude = 2000,
-		.attack_time = 0.05,
-		.attack_overshoot = .5,
 		.pressed = false,
-		.decay_time = 12,
-		.sustain_level = 0,
-		.release_time = .1,
-		.envelopeMultiplier = 1.0,
-		.decay_type = LINEAR_DECAY
+
+		.envelope = PianoEnvelope_Preset
 	};
 
 	const int total_frames = SAMPLE_RATE * 0.1;

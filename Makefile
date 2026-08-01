@@ -9,7 +9,7 @@ endif
 
 # 2. CHOOSE TARGET CONFIGURATION (Defaults to host architecture)
 # Options: x86_64, x86, rpi3
-TARGET_ARCH ?= x86_64
+TARGET_ARCH ?= $(HOST_ARCH)
 
 CFLAGS = -I./include -Wall -Wextra -O3
 
@@ -52,28 +52,29 @@ else
     RM      := rm -rf
 endif
 
-# 5. BUILD RULES
-TARGET := program_$(TARGET_ARCH)$(EXE_EXT)
-SRCS   := src/main.c src/synth.c src/voice.c
-OBJS   := $(SRCS:.c=.o)
 
-.PHONY: all clean
+# 5. BUILD RULES
+TARGET := build/program_$(TARGET_ARCH)$(EXE_EXT)
+SRCS   := src/main.c src/synth.c src/voice.c src/presets.c
+OBJS   := $(addprefix build/,$(SRCS:.c=.o))
+
+.PHONY: all clean configure
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	@mkdir -p build/$(@D)
-	$(CC) $(addprefix build/,$(OBJS)) -o build/$@ -lasound -pthread -lm
+	@mkdir -p $(@D)
+	$(CC) $(OBJS) -o $@ -lasound -pthread -lm
 
-%.o: %.c
-	@mkdir -p build/$(@D)
-	$(CC) $(CFLAGS) -c $< -o build/$@
+build/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) $(CFLAGS) -c $< -o $@
 
 configure:
 	sudo apt-get install libasound2-dev
 
 run: all
-	./build/$(TARGET)
+	./$(TARGET)
 
 clean:
-	$(RM) build/*.o $(TARGET)
+	$(RM) build/**/*.o $(TARGET)
