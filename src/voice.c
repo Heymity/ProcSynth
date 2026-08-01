@@ -5,6 +5,7 @@
 #include <math.h>
 #include <procSynth/synth.h>
 #include <procSynth/voice.h>
+#include <pffft.h>
 
 #define INACTIVE_VS 0
 #define ATTACK_VS 1
@@ -25,7 +26,7 @@ void reset_envelope(Envelope *envelope) {
 }
 
 void reset_timbre(Timbre* timbre) {
-
+    timbre->num_harmonics = 0;
 }
 
 void reset_voice(Voice* voice) {
@@ -55,6 +56,34 @@ int get_current_voice_state(Voice* voice) {
 	if (voice->pressed && voice->baseAmplitude * voice->envelope.envelopeMultiplier > 1) return SUSTAIN_VS;
 
 	return RELEASE_VS;
+}
+
+void build_wavetable(Timbre* timbre) {
+    float *espectro = pffft_aligned_malloc(WAVETABLE_SIZE * sizeof(float));
+    float *audio_saida = pffft_aligned_malloc(WAVETABLE_SIZE * sizeof(float));
+    float *work = pffft_aligned_malloc(WAVETABLE_SIZE * sizeof(float));
+
+    for (int i = 0; i < WAVETABLE_SIZE; i++) espectro[i] = 0.0f;
+
+    // PFFFT_REAL intercala parte Real (índice par) e Imaginária (ímpar)
+    for (int h = 0; h < timbre->num_harmonics; h++) {
+        int bin = (h + 1) * 2;
+        if (bin < WAVETABLE_SIZE) {
+            espectro[bin] = (float)timbre->harmonic_weights[h];
+        }
+    }
+
+    PFFFT_Setup *setup = pffft_new_setup(WAVETABLE_SIZE, PFFFT_REAL);
+    pffft_transform_ordered(setup, espectro, audio_saida, work, PFFFT_BACKWARD);
+
+    for(int i = 0; i < WAVETABLE_SIZE; i++) {
+        timbre->wavetable[i] = 100*(double)(audio_saida[i] / WAVETABLE_SIZE);
+    }
+
+    pffft_destroy_setup(setup);
+    pffft_aligned_free(espectro);
+    pffft_aligned_free(audio_saida);
+    pffft_aligned_free(work);
 }
 
 void synth_voice(Voice* v, short* output_buffer, const int buffer_size) {
@@ -95,11 +124,14 @@ void synth_voice(Voice* v, short* output_buffer, const int buffer_size) {
 				v->envelope.envelopeMultiplier = 0;
 				break;
 		}
-		const double current_amp = v->baseAmplitude * v->envelope.envelopeMultiplier;
-		//printf("ca: %f\n", current_amp);
-		const short sample = (short)(current_amp * sin(v->cumulative_phase));
+        const double current_amp = v->baseAmplitude * v->envelope.envelopeMultiplier;
 
-		v->cumulative_phase += phase_increment;
+        int wt_index = (int)((v->cumulative_phase / (2.0 * M_PI)) * WAVETABLE_SIZE);
+        if (wt_index >= WAVETABLE_SIZE) wt_index = WAVETABLE_SIZE - 1;
+
+        const short sample = (short)(current_amp * v->timbre.wavetable[wt_index]);
+
+        v->cumulative_phase += phase_increment;
 
 		if (v->cumulative_phase >= 2.0 * M_PI)
 			v->cumulative_phase -= 2.0 * M_PI;

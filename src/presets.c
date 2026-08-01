@@ -7,7 +7,7 @@
 
 const Envelope PianoEnvelope_Preset = (Envelope) {
 	.attack_time = 0.005,
-	.attack_overshoot = .1,
+	.attack_overshoot = 0,
 	.decay_time = 5,
 	.sustain_level = 0.05,
 	.release_time = .1,
@@ -27,4 +27,9 @@ const Envelope ViolinEnvelope_Preset = (Envelope) {
 	.decay_type = LINEAR_DECAY,
 	.release_start_multiplier = 0.0,
 	.sustain_end_time = 0.0,
+};
+
+Timbre PianoTimbre_Preset = (Timbre) {
+    .num_harmonics = 6,
+    .harmonic_weights = {1.0, 0.6, 0.3, 0.15, 0.08, 0.03, 0.0, 0.0}
 };

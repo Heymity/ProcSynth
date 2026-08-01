@@ -11,7 +11,7 @@ endif
 # Options: x86_64, x86, rpi3
 TARGET_ARCH ?= $(HOST_ARCH)
 
-CFLAGS = -I./include -Wall -Wextra -O3
+CFLAGS = -I./include -I./external/pffft/include/pffft -Wall -Wextra -O3
 
 # 3. SET COMPILER AND FLAGS BASED ON ARCHITECTURE
 ifeq ($(TARGET_ARCH),rpi3)
@@ -55,7 +55,7 @@ endif
 
 # 5. BUILD RULES
 TARGET := build/program_$(TARGET_ARCH)$(EXE_EXT)
-SRCS   := src/main.c src/synth.c src/voice.c src/presets.c
+SRCS   := src/main.c src/synth.c src/voice.c src/presets.c external/pffft/src/pffft.c external/pffft/src/pffft_common.c
 OBJS   := $(addprefix build/,$(SRCS:.c=.o))
 
 .PHONY: all clean configure

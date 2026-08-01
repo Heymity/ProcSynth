@@ -1,14 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <alsa/asoundlib.h>
 #include <procSynth/synth.h>
 #include <procSynth/voice.h>
 #include <procSynth/presets.h>
-
-#define DURATION_SEC (40.0/1000.0)
-#define FREQUENCY 440.0
-#define VOLUME 30000.0 // Max for 16-bit signed is 32767
 
 #define VOICES_NUM 100
 
@@ -43,7 +38,7 @@ int open_and_configure_interface(snd_pcm_t** playback_handle) {
 							 CHANNELS,
 							 SAMPLE_RATE,
 							 1,			// Allow software resampling
-							 20000); // 20ms latency for real time
+							 60000); // 20ms latency for real time
 	if (err < 0) {
 		fprintf(stderr, "Playback configuration error: %s\n", snd_strerror(err));
 		snd_pcm_close(*playback_handle);
@@ -63,6 +58,13 @@ void synth() {
 		reset_voice(&voices[i]);
 	}
 
+    build_wavetable(&PianoTimbre_Preset);
+
+    for (int i = 1; i < VOICES_NUM; i++) {
+        reset_voice(&voices[i]);
+    }
+
+
 	voices[0] = (Voice) {
 		.voiceNumber = 0,
 		.frequency = NOTE_C4,
@@ -71,7 +73,8 @@ void synth() {
 		.baseAmplitude = 7500,
 		.pressed = true,
 
-		.envelope = PianoEnvelope_Preset
+		.envelope = PianoEnvelope_Preset,
+        .timbre = PianoTimbre_Preset
 	};
 
 	voices[1] = (Voice) {
@@ -79,10 +82,11 @@ void synth() {
 		.frequency = NOTE_E4,
 		.active = false,
 
-		.baseAmplitude = 4500,
+		.baseAmplitude = 2500,
 		.pressed = false,
 
-		.envelope = ViolinEnvelope_Preset
+		.envelope = ViolinEnvelope_Preset,
+        .timbre = PianoTimbre_Preset
 	};
 
 	voices[2] = (Voice) {
@@ -93,7 +97,8 @@ void synth() {
 		.baseAmplitude = 6000,
 		.pressed = false,
 
-		.envelope = PianoEnvelope_Preset
+		.envelope = PianoEnvelope_Preset,
+        .timbre = PianoTimbre_Preset
 	};
 
 	voices[3] = (Voice) {
@@ -104,7 +109,8 @@ void synth() {
 		.baseAmplitude = 2000,
 		.pressed = false,
 
-		.envelope = PianoEnvelope_Preset
+		.envelope = PianoEnvelope_Preset,
+        .timbre = PianoTimbre_Preset
 	};
 
 	const int total_frames = SAMPLE_RATE * 0.1;
@@ -119,11 +125,11 @@ void synth() {
 	int i = 0;
 	while (true){
 		i++;
-		//if (i++ > 50) voices[0].pressed = false;
+		if (i++ > 50) voices[0].pressed = false;
 
-		if (i % 15 == 0) {
-			voices[i / 15].active = true;
-			voices[i / 15].pressed = true;
+		if (i % 150 == 0) {
+			voices[i / 150].active = true;
+			voices[i / 150].pressed = true;
 		}
 
 		for (int j = 0; j < VOICES_NUM; j++) {

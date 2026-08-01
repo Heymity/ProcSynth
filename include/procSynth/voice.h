@@ -9,6 +9,9 @@
 #define LINEAR_DECAY 0
 #define EXPONENTIAL_DECAY 1
 
+#define WAVETABLE_SIZE 1024
+#define MAX_HARMONICS 8
+
 struct Envelope {
   double envelopeMultiplier;
   double attack_time;
@@ -23,7 +26,9 @@ struct Envelope {
 typedef struct Envelope Envelope;
 
 struct Timbre {
-
+    int num_harmonics;
+    double harmonic_weights[MAX_HARMONICS];
+    double wavetable[WAVETABLE_SIZE]; // Armazenará a onda processada pelo PFFFT
 };
 typedef struct Timbre Timbre;
 
@@ -47,5 +52,6 @@ typedef struct Voice Voice;
 
 void synth_voice(Voice* v, short* output_buffer, int buffer_size);
 void reset_voice(Voice* voice);
+void build_wavetable(Timbre* timbre);
 
 #endif //VOICE_H

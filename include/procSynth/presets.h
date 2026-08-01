@@ -17,4 +17,6 @@
 extern const Envelope PianoEnvelope_Preset;
 extern const Envelope ViolinEnvelope_Preset;
 
+extern Timbre PianoTimbre_Preset;
+
 #endif //PRESETS_H
