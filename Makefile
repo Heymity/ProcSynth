@@ -82,5 +82,6 @@ clean:
 wslConfig:
 	sudo modprobe snd-usb-audio
 	sudo modprobe snd-seq-midi
+	sudo chmod -R a+rw /dev/snd/
 	aconnect -l
 	@echo "Execute 'usbipd attach --wsl --busid xx-xx' in windows"
