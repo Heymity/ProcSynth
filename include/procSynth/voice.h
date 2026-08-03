@@ -52,6 +52,8 @@ typedef struct Voice Voice;
 
 void synth_voice(Voice* v, short* output_buffer, int buffer_size);
 void reset_voice(Voice* voice);
+void reset_envelope(Envelope *envelope);
+void reset_timbre(Timbre* timbre);
 void build_wavetable(Timbre* timbre);
 
 #endif //VOICE_H

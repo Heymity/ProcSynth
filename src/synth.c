@@ -5,11 +5,13 @@
 #include <procSynth/voice.h>
 #include <procSynth/presets.h>
 
+#include "procSynth/utils.h"
+
 #define VOICES_NUM 100
 
 static Voice voices[VOICES_NUM] = {};
 
-void write_buffer(snd_pcm_t* playback_handle, const short * buffer, const long length) {
+static void write_buffer(snd_pcm_t* playback_handle, const short * buffer, const long length) {
 	snd_pcm_sframes_t frames_written = snd_pcm_writei(playback_handle, buffer, length);
 	if (frames_written < 0) {
 		frames_written = snd_pcm_recover(playback_handle, (int)frames_written, 0);
@@ -19,12 +21,12 @@ void write_buffer(snd_pcm_t* playback_handle, const short * buffer, const long l
 	}
 }
 
-void close_and_drain(snd_pcm_t* playback_handle) {
+static void close_and_drain(snd_pcm_t* playback_handle) {
 	snd_pcm_drain(playback_handle);
 	snd_pcm_close(playback_handle);
 }
 
-int open_and_configure_interface(snd_pcm_t** playback_handle) {
+static int open_and_configure_interface(snd_pcm_t** playback_handle) {
 	int err;
 
 	if ((err = snd_pcm_open(playback_handle, "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
@@ -38,7 +40,7 @@ int open_and_configure_interface(snd_pcm_t** playback_handle) {
 							 CHANNELS,
 							 SAMPLE_RATE,
 							 1,			// Allow software resampling
-							 60000); // 20ms latency for real time
+							 20000); // 20ms latency for real time
 	if (err < 0) {
 		fprintf(stderr, "Playback configuration error: %s\n", snd_strerror(err));
 		snd_pcm_close(*playback_handle);
@@ -48,72 +50,61 @@ int open_and_configure_interface(snd_pcm_t** playback_handle) {
 	return 0;
 }
 
+int find_free_voice() {
+	for (int i = 0; i < VOICES_NUM; i++) {
+		if (!voices[i].active)
+			return i;
+	}
+	return -1;
+}
+
+int press_key(double frequency, short amplitude, Envelope envelope, Timbre timbre) {
+	int v_index = find_free_voice();
+	if (v_index < 0) return v_index;
+
+	reset_voice(&voices[v_index]);
+
+	voices[v_index] = (Voice) {
+		.frequency = frequency,
+		.active = true,
+		.pressed = true,
+		.baseAmplitude = amplitude,
+		.envelope = envelope,
+		.timbre = timbre
+	};
+
+	return v_index;
+}
+
+void release_key(int voice_number) {
+	if (voice_number < 0 || voice_number >= VOICES_NUM) return;
+	voices[voice_number].pressed = false;
+}
+
+void* start_synth_thread(void* _) {
+	print_formated("Initializing synth thread\n");
+	synth();
+	print_formated("Synth thread ended abruptly for no apparent reason\n");
+	return NULL;
+}
+
 void synth() {
 	snd_pcm_t *playback_handle;
 
 	if (open_and_configure_interface(&playback_handle) != 0)
 		return;
 
+	build_wavetable(&PianoTimbre_Preset);
+	build_wavetable(&ViolinTimbre_Preset);
+
+	print_formated("Wavetables built\n");
+
 	for (int i = 1; i < VOICES_NUM; i++) {
 		reset_voice(&voices[i]);
+		voices[i].voiceNumber = i;
 	}
 
-    build_wavetable(&PianoTimbre_Preset);
-
-    for (int i = 1; i < VOICES_NUM; i++) {
-        reset_voice(&voices[i]);
-    }
-
-
-	voices[0] = (Voice) {
-		.voiceNumber = 0,
-		.frequency = NOTE_C4,
-		.active = true,
-
-		.baseAmplitude = 7500,
-		.pressed = true,
-
-		.envelope = PianoEnvelope_Preset,
-        .timbre = PianoTimbre_Preset
-	};
-
-	voices[1] = (Voice) {
-		.voiceNumber = 1,
-		.frequency = NOTE_E4,
-		.active = false,
-
-		.baseAmplitude = 2500,
-		.pressed = false,
-
-		.envelope = ViolinEnvelope_Preset,
-        .timbre = PianoTimbre_Preset
-	};
-
-	voices[2] = (Voice) {
-		.voiceNumber = 2,
-		.frequency = NOTE_G4,
-		.active = false,
-
-		.baseAmplitude = 6000,
-		.pressed = false,
-
-		.envelope = PianoEnvelope_Preset,
-        .timbre = PianoTimbre_Preset
-	};
-
-	voices[3] = (Voice) {
-		.voiceNumber = 3,
-		.frequency = NOTE_C4*2,
-		.active = false,
-
-		.baseAmplitude = 2000,
-		.pressed = false,
-
-		.envelope = PianoEnvelope_Preset,
-        .timbre = PianoTimbre_Preset
-	};
-
-	const int total_frames = SAMPLE_RATE * 0.1;
+	const int total_frames = 256;
 	short *buffer = malloc(total_frames * CHANNELS * sizeof(short));
 	short *loc_buffer = malloc(total_frames * CHANNELS * sizeof(short));
 
@@ -122,20 +113,13 @@ void synth() {
 		loc_buffer[i] = 0;
 	}
 
-	int i = 0;
+	print_formated("Synth Running\n");
+
 	while (true){
-		i++;
-		if (i++ > 50) voices[0].pressed = false;
+		for (int i = 0; i < VOICES_NUM; i++) {
+			if (!voices[i].active) continue;
 
-		if (i % 150 == 0) {
-			voices[i / 150].active = true;
-			voices[i / 150].pressed = true;
-		}
-
-		for (int j = 0; j < VOICES_NUM; j++) {
-			if (!voices[j].active) continue;
-
-			synth_voice(&voices[j], loc_buffer, total_frames * CHANNELS);
+			synth_voice(&voices[i], loc_buffer, total_frames * CHANNELS);
 
 			for (int k = 0; k < total_frames * CHANNELS; k++) {
 				if (buffer[k] + loc_buffer[k] > MAX_VOLUME) buffer[k] = MAX_VOLUME;
@@ -145,9 +129,7 @@ void synth() {
 
 		write_buffer(playback_handle, buffer, total_frames);
 
-		for (int j = 0; j < total_frames * CHANNELS; j++) {
-			buffer[j] = 0;
-		}
+		memset(buffer, 0, total_frames * CHANNELS * sizeof(short));
 	}
 
 	free(buffer);

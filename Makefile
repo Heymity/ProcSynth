@@ -55,10 +55,10 @@ endif
 
 # 5. BUILD RULES
 TARGET := build/program_$(TARGET_ARCH)$(EXE_EXT)
-SRCS   := src/main.c src/synth.c src/voice.c src/presets.c external/pffft/src/pffft.c external/pffft/src/pffft_common.c
+SRCS   := src/main.c src/synth.c src/voice.c src/presets.c external/pffft/src/pffft.c external/pffft/src/pffft_common.c src/utils.c src/io.c
 OBJS   := $(addprefix build/,$(SRCS:.c=.o))
 
-.PHONY: all clean configure
+.PHONY: all clean configure wslConfig run
 
 all: $(TARGET)
 
@@ -78,3 +78,9 @@ run: all
 
 clean:
 	$(RM) build/**/*.o $(TARGET)
+
+wslConfig:
+	sudo modprobe snd-usb-audio
+	sudo modprobe snd-seq-midi
+	aconnect -l
+	@echo "Execute 'usbipd attach --wsl --busid xx-xx' in windows"

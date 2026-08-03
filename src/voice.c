@@ -3,9 +3,10 @@
 //
 
 #include <math.h>
+#include <pffft.h>
 #include <procSynth/synth.h>
 #include <procSynth/voice.h>
-#include <pffft.h>
+#include <string.h>
 
 #define INACTIVE_VS 0
 #define ATTACK_VS 1
@@ -27,6 +28,8 @@ void reset_envelope(Envelope *envelope) {
 
 void reset_timbre(Timbre* timbre) {
     timbre->num_harmonics = 0;
+	memset(timbre->harmonic_weights, 0, sizeof(double) * MAX_HARMONICS);
+	memset(timbre->wavetable, 0, sizeof(double) * WAVETABLE_SIZE);
 }
 
 void reset_voice(Voice* voice) {
@@ -37,6 +40,7 @@ void reset_voice(Voice* voice) {
 	voice->envelope.attack_overshoot = 0;
 	voice->pressed = false;
 	reset_envelope(&voice->envelope);
+	reset_timbre(&voice->timbre);
 
 	voice->time = 0;
 	voice->cumulative_phase = 0;
@@ -44,13 +48,16 @@ void reset_voice(Voice* voice) {
 	voice->active = false;
 }
 
-int get_current_voice_state(Voice* voice) {
+static int get_current_voice_state(Voice* voice) {
 	if (!voice->active) {
 		voice->active = false;
 		return INACTIVE_VS;
 	}
 	if (voice->time < voice->envelope.attack_time) return ATTACK_VS;
-	if (voice->baseAmplitude * voice->envelope.envelopeMultiplier < 1) return INACTIVE_VS;
+	if (voice->baseAmplitude * voice->envelope.envelopeMultiplier < 1) {
+		voice->active = false;
+		return INACTIVE_VS;
+	}
 	if (!voice->pressed && voice->baseAmplitude * voice->envelope.envelopeMultiplier > 1) return RELEASE_VS;
 	if (voice->time - voice->envelope.attack_time < voice->envelope.decay_time) return DECAY_VS;
 	if (voice->pressed && voice->baseAmplitude * voice->envelope.envelopeMultiplier > 1) return SUSTAIN_VS;
@@ -65,8 +72,8 @@ void build_wavetable(Timbre* timbre) {
 
     for (int i = 0; i < WAVETABLE_SIZE; i++) espectro[i] = 0.0f;
 
-    // PFFFT_REAL intercala parte Real (índice par) e Imaginária (ímpar)
     for (int h = 0; h < timbre->num_harmonics; h++) {
+    	// PFFFT intercala parte Real (índice par) e Imaginária (ímpar)
         int bin = (h + 1) * 2;
         if (bin < WAVETABLE_SIZE) {
             espectro[bin] = (float)timbre->harmonic_weights[h];
@@ -102,8 +109,7 @@ void synth_voice(Voice* v, short* output_buffer, const int buffer_size) {
 				const double n_time = (v->time - v->envelope.attack_time) / v->envelope.decay_time;
 				if (v->envelope.decay_type == LINEAR_DECAY)
 					v->envelope.envelopeMultiplier =
-							(1 + v->envelope.attack_overshoot +
-							 n_time * (v->envelope.sustain_level - (1 + v->envelope.attack_overshoot)));
+							(1 + v->envelope.attack_overshoot + n_time * (v->envelope.sustain_level - (1 + v->envelope.attack_overshoot)));
 				else
 					v->envelope.envelopeMultiplier = exp(-n_time) * (1 + v->envelope.attack_overshoot);
 				v->envelope.release_start_multiplier = v->envelope.envelopeMultiplier;
