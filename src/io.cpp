@@ -17,18 +17,20 @@
 
 const byte KEYPADROWS = 4;
 const byte KEYPADCOLS = 4;
-char keypadkeys[ROWS][COLS] = {
+char keypadkeys[KEYPADROWS][KEYPADCOLS] = {
   {'1','2','3','A'},
   {'4','5','6','B'},
   {'7','8','9','C'},
   {'*','0','#','D'}
 };
-static byte KeypadRowPins[ROWS] = {16, 20, 21, 26};
-static byte KeytpadRowColPins[COLS] = {19, 13, 6, 5};
-static Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+static byte KeypadRowPins[KEYPADROWS] = {16, 20, 21, 26};
+static byte KeypadColPins[KEYPADCOLS] = {19, 13, 6, 5};
+static Keypad keypad = Keypad( makeKeymap(keypadkeys), KeypadRowPins, KeypadColPins, KEYPADROWS, KEYPADCOLS );
 
 static Envelope midi_envelope;
 static Timbre midi_timbre;
+
+void handle_keypad_matrix (char key);
 
 void * midi_thread_func(void * _) {
 	(void)_; // Suppress unused param warning
@@ -92,16 +94,18 @@ void * midi_thread_func(void * _) {
 }
 
 void * io_thread(void * _) {
-	(void*) _;
+	(void) _;
 	
 	print_formated("Initializing MIDI Input thread\n");
     wiringPiSetupGpio();
 	keypad.setDebounceTime(50);
 	
-	while () {
-		key = keypad.getKey();
-		if (key) 
-			
+	while (1) {
+		char key = keypad.getKey();
+		if (key) {
+			handle_keypad_matrix(key);
+		}
+				
 	}
 	
 	return NULL;
@@ -110,20 +114,41 @@ void * io_thread(void * _) {
 void handle_keypad_matrix (char key) {
 	switch(key){
 		case '1':
-			
+			midi_envelope = PianoEnvelope_Preset;
+			midi_timbre = PianoTimbre_Preset;
+			break;
 		case '2':
-		
+			midi_envelope = ViolinEnvelope_Preset;
+			midi_timbre = ViolinTimbre_Preset;
+			break;
 		case '3':
-		
+			midi_envelope = GuitarEnvelope_Preset;
+			midi_timbre = GuitarTimbre_Preset;
+			break;
 		case '4':
-		
+			midi_envelope = TromboneEnvelope_Preset;
+			midi_timbre = TromboneTimbre_Preset;
+			break;
 		case '5':
-		
+			midi_envelope = ClarinetEnvelope_Preset;
+			midi_timbre = ClarinetTimbre_Preset;
+			break;
 		case '6':
-		
+			midi_envelope = HarpEnvelope_Preset;
+			midi_timbre = HarpTimbre_Preset;
+			break;
 		case '7':
-		
+			midi_envelope = OrganEnvelope_Preset;
+			midi_timbre = OrganTimbre_Preset;
+			break;
 		case '8':
+			midi_envelope = DrumEnvelope_Preset;
+			midi_timbre = DrumTimbre_Preset;
+			break;
+		case '9':
+			midi_envelope = BassEnvelope_Preset;
+			midi_timbre = BassTimbre_Preset;
+		break;
 	}
 	
 		

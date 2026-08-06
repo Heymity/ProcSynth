@@ -57,7 +57,7 @@ endif
 
 # 5. BUILD RULES
 TARGET := build/program_$(TARGET_ARCH)$(EXE_EXT)
-SRCS   := src/main.c src/synth.c src/voice.c src/presets.c external/pffft/src/pffft.c external/pffft/src/pffft_common.c src/utils.c src/io.cpp
+SRCS   := src/main.c src/synth.c src/voice.c src/presets.c external/pffft/src/pffft.c external/pffft/src/pffft_common.c src/utils.c src/io.cpp external/Freenove/MatrixKeypad/src/Key.cpp external/Freenove/MatrixKeypad/src/Keypad.cpp
 TMP	   := $(SRCS:.cpp=.o)
 OBJS   := $(addprefix build/,$(TMP:.c=.o))
 

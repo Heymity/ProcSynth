@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#define N_THREADS 3
+#define N_THREADS 4
 #include <pthread.h>
 
 

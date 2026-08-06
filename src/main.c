@@ -54,6 +54,13 @@ int main() {
 	}
 	print_formated("MIDI input thread created \n");
 
+	ThreadsNames[3] = "IO Thread";
+	if (pthread_create(&ThreadsId[3], NULL, io_thread, NULL) != 0) {
+		print_formated("Error creating IO thread. Aborting... \n");
+		return 1;
+	}
+	print_formated("IO thread created \n");
+
 	sleep(3);
 
 	print_formated("Pressing C major chord for 1s as Piano for test \n");
