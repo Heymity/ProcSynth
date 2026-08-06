@@ -1,4 +1,4 @@
-# ProcSynth - Sintetizador Digital / "Theremin" Híbrido
+ ProcSynth - Sintetizador Digital / "Theremin" Híbrido
 
 ## Definição e motivação
 
