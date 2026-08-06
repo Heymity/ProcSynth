@@ -15,8 +15,8 @@
 
 #include <Freenove/MatrixKeypad/include/Keypad.hpp>
 
-const byte KEYPADROWS = 4;
-const byte KEYPADCOLS = 4;
+constexpr byte KEYPADROWS = 4;
+constexpr byte KEYPADCOLS = 4;
 char keypadkeys[KEYPADROWS][KEYPADCOLS] = {
   {'1','2','3','A'},
   {'4','5','6','B'},
@@ -25,18 +25,18 @@ char keypadkeys[KEYPADROWS][KEYPADCOLS] = {
 };
 static byte KeypadRowPins[KEYPADROWS] = {16, 20, 21, 26};
 static byte KeypadColPins[KEYPADCOLS] = {19, 13, 6, 5};
-static Keypad keypad = Keypad( makeKeymap(keypadkeys), KeypadRowPins, KeypadColPins, KEYPADROWS, KEYPADCOLS );
+static auto keypad = Keypad( makeKeymap(keypadkeys), KeypadRowPins, KeypadColPins, KEYPADROWS, KEYPADCOLS );
 
 static Envelope midi_envelope;
 static Timbre midi_timbre;
 
 void handle_keypad_matrix (char key);
 
-void * midi_thread_func(void * _) {
-	(void)_; // Suppress unused param warning
+void *midi_thread_func(void *_) {
+	(void) _; // Suppress unused param warning
 	print_formated("Initializing MIDI Input thread\n");
 	snd_seq_t *seq_handle;
-	
+
 	midi_envelope = PianoEnvelope_Preset;
 	midi_timbre = PianoTimbre_Preset;
 
@@ -47,12 +47,12 @@ void * midi_thread_func(void * _) {
 
 	snd_seq_set_client_name(seq_handle, "ProcSynth MIDI Input");
 
-	snd_seq_create_simple_port(seq_handle, "ProcSynth Port",
-										  SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
-										  SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
+	snd_seq_create_simple_port(seq_handle, "ProcSynth Port", SND_SEQ_PORT_CAP_WRITE | SND_SEQ_PORT_CAP_SUBS_WRITE,
+							   SND_SEQ_PORT_TYPE_MIDI_GENERIC | SND_SEQ_PORT_TYPE_APPLICATION);
 
 
-	print_formated("Ready to receive MIDI input. Connect device via terminal using 'aconnect -l' and 'aconnect XX YY'.\n");
+	print_formated(
+			"Ready to receive MIDI input. Connect device via terminal using 'aconnect -l' and 'aconnect XX YY'.\n");
 	if (const int res = system("aconnect -l"); res < 0) {
 		print_formated("aconnect -l returned error\n");
 	}
@@ -65,7 +65,8 @@ void * midi_thread_func(void * _) {
 
 	while (snd_seq_event_input(seq_handle, &ev) >= 0) {
 		if (ev->type == SND_SEQ_EVENT_NOTEON) {
-			//print_formated("Note: %d - Vel: %d - Tag: %c - Type: %d\n", ev->data.note.note, ev->data.note.velocity, ev->tag, ev->type);
+			// print_formated("Note: %d - Vel: %d - Tag: %c - Type: %d\n", ev->data.note.note, ev->data.note.velocity,
+			// ev->tag, ev->type);
 			const int note = ev->data.note.note;
 			const int velocity = ev->data.note.velocity;
 
@@ -78,13 +79,13 @@ void * midi_thread_func(void * _) {
 			} else {
 				release_key(noteToVoice[ev->data.note.note]);
 			}
-		}
-		else if (ev->type == SND_SEQ_EVENT_NOTEOFF) {
-			//print_formated("Note: %d - Vel: %d - Tag: %c - Type: %d\n", ev->data.note.note, ev->data.note.velocity, ev->tag, ev->type);
+		} else if (ev->type == SND_SEQ_EVENT_NOTEOFF) {
+			// print_formated("Note: %d - Vel: %d - Tag: %c - Type: %d\n", ev->data.note.note, ev->data.note.velocity,
+			// ev->tag, ev->type);
 			release_key(noteToVoice[ev->data.note.note]);
 		} else if (ev->type == SND_SEQ_EVENT_PGMCHANGE) {
-			//print_formated("Value: %d\n", ev->data.control.value);
-			internalVolume =  ev->data.control.value;
+			// print_formated("Value: %d\n", ev->data.control.value);
+			internalVolume = ev->data.control.value;
 		}
 
 		snd_seq_free_event(ev);
@@ -93,25 +94,23 @@ void * midi_thread_func(void * _) {
 	return nullptr;
 }
 
-void * io_thread(void * _) {
+[[noreturn]] void * io_thread(void * _) {
 	(void) _;
 	
 	print_formated("Initializing MIDI Input thread\n");
     wiringPiSetupGpio();
 	keypad.setDebounceTime(50);
 	
-	while (1) {
-		char key = keypad.getKey();
-		if (key) {
+	while (true) {
+		if (const char key = keypad.getKey()) {
 			handle_keypad_matrix(key);
 		}
-				
 	}
 	
-	return NULL;
+	return nullptr;
 }
 
-void handle_keypad_matrix (char key) {
+void handle_keypad_matrix (const char key) {
 	switch(key){
 		case '1':
 			midi_envelope = PianoEnvelope_Preset;
@@ -148,7 +147,11 @@ void handle_keypad_matrix (char key) {
 		case '9':
 			midi_envelope = BassEnvelope_Preset;
 			midi_timbre = BassTimbre_Preset;
-		break;
+			break;
+		default:
+			midi_envelope = PianoEnvelope_Preset;
+			midi_timbre = PianoTimbre_Preset;
+			break;
 	}
 	
 		
