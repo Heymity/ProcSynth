@@ -10,15 +10,33 @@
 
 #include "procSynth/presets.h"
 #include "procSynth/utils.h"
-
+#include "procSynth/voice.h"
 #include <wiringPi.h>
 
 #include <Freenove/MatrixKeypad/include/Keypad.hpp>
+
+const byte KEYPADROWS = 4;
+const byte KEYPADCOLS = 4;
+char keypadkeys[ROWS][COLS] = {
+  {'1','2','3','A'},
+  {'4','5','6','B'},
+  {'7','8','9','C'},
+  {'*','0','#','D'}
+};
+static byte KeypadRowPins[ROWS] = {16, 20, 21, 26};
+static byte KeytpadRowColPins[COLS] = {19, 13, 6, 5};
+static Keypad keypad = Keypad( makeKeymap(keys), rowPins, colPins, ROWS, COLS );
+
+static Envelope midi_envelope;
+static Timbre midi_timbre;
 
 void * midi_thread_func(void * _) {
 	(void)_; // Suppress unused param warning
 	print_formated("Initializing MIDI Input thread\n");
 	snd_seq_t *seq_handle;
+	
+	midi_envelope = PianoEnvelope_Preset;
+	midi_timbre = PianoTimbre_Preset;
 
 	if (snd_seq_open(&seq_handle, "default", SND_SEQ_OPEN_INPUT, 0) < 0) {
 		print_formated("Error opening ALSA Sequencer\n");
@@ -54,7 +72,7 @@ void * midi_thread_func(void * _) {
 			const auto amplitude = static_cast<short>((velocity / 127.0) * (internalVolume / 127.0) * MAX_VOLUME);
 
 			if (velocity > 0) {
-				noteToVoice[ev->data.note.note] = press_key(freq, amplitude, PianoEnvelope_Preset, PianoTimbre_Preset);
+				noteToVoice[ev->data.note.note] = press_key(freq, amplitude, midi_envelope, midi_timbre);
 			} else {
 				release_key(noteToVoice[ev->data.note.note]);
 			}
@@ -72,3 +90,42 @@ void * midi_thread_func(void * _) {
 
 	return nullptr;
 }
+
+void * io_thread(void * _) {
+	(void*) _;
+	
+	print_formated("Initializing MIDI Input thread\n");
+    wiringPiSetupGpio();
+	keypad.setDebounceTime(50);
+	
+	while () {
+		key = keypad.getKey();
+		if (key) 
+			
+	}
+	
+	return NULL;
+}
+
+void handle_keypad_matrix (char key) {
+	switch(key){
+		case '1':
+			
+		case '2':
+		
+		case '3':
+		
+		case '4':
+		
+		case '5':
+		
+		case '6':
+		
+		case '7':
+		
+		case '8':
+	}
+	
+		
+}
+

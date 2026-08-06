@@ -100,6 +100,8 @@ void synth() {
 
 	build_wavetable(&PianoTimbre_Preset);
 	build_wavetable(&ViolinTimbre_Preset);
+	
+
 
 	print_formated("Wavetables built; Buffer Size = %lu; Period Size = %lu\n", buffer_size, period_size);
 
