@@ -1,6 +1,9 @@
 # ProcSynth - Lightweight Synthesizer 
 
-[Installation and Use](#installation-and-use)
+1. [Definition and Motivation](#definição-e-motivação)
+2. [Project Functional and Non-functional Requirements](#requisitos-do-projeto)
+3. [Working Principle](#working-principle)
+4. [Installation and Use](#installation-and-use)
 
 ## Definição e motivação
 
@@ -8,18 +11,27 @@ ProcSynth é um sintetizador de sons baseado no instrumento Theremin. Diferente 
 
 ## Requisitos do projeto
 
-| Id | Tipo | Nome | Descrição |
-| --- | --- | --- | --- |
-| RF1 | Funcional | Controle por ultrassom | O sistema deve mapear a distância lida pelo sensor ultrassônico na alteração contínua da frequência (pitch) ou volume do som gerado. |
-| RF2 | Funcional  | Entrada Matricial / Sequenciador | O Keypad 4x4 deve permitir o acionamento direto de notas musicais (estilo piano) ou atuar como um sequenciador de batidas programável |
-| RF3 | Funcional | Ajuste de Parâmetros Analógicos |   Os potenciômetros devem permitir o ajuste em tempo real de parâmetros do áudio, tais como frequência de corte (Cutoff) de filtro ou distorção.|
-| RF4 | Funcional | Interface gráfica no LCD | O Display LCD deve apresentar os menus de configuração, o modo ativo do sintetizador e a visualização dos parâmetros selecionados. |
-| RF5 | Funcional | Emissão de Áudio via PWM | O áudio sintetizado deve ser emitido via PWM por hardware acoplado ao Buzzer ou saída física de áudio. |
-| RN1 | Não-funcional | Latência baixa e determinismo | O tempo de resposta entre qualquer entrada do usuário e a mudança na saída de áudio não deve ser perceptível (< 20 ms). |
-| RN2 | Não-funcional | Otimização por DMA | A alimentação dos buffers do periférico de PWM deve ser realizada via DMA para descarregar a CPU e eliminar atrasos (jitter). |
-| RN3 | Não-funcional | Varredura assíncrona e debounce | A leitura das entradas do teclado matricial deve possuir tratamento de debounce e ser realizada de forma não-bloqueante.|
-| RN4 | Não-funcional | Exibição visual do volume de saída pela Led Bar | A Led Bar do kit deve exibir uma quantidade crescente de luzes baseada no quão alto é o som sintetizado. |
+| Id | Tipo | Nome                                             | Descrição |
+| --- | --- |--------------------------------------------------| --- |
+| RF1 | Funcional | Controle por ultrassom                           | O sistema deve mapear a distância lida pelo sensor ultrassônico na alteração contínua da frequência (pitch) ou volume do som gerado. |
+| RF2 | Funcional  | Entrada Matricial / Sequenciador                 | O Keypad 4x4 deve permitir o acionamento direto de notas musicais (estilo piano) ou atuar como um sequenciador de batidas programável |
+| RF3 | Funcional | Ajuste de Parâmetros Analógicos                  |   Os potenciômetros devem permitir o ajuste em tempo real de parâmetros do áudio, tais como frequência de corte (Cutoff) de filtro ou distorção.|
+| RF4 | Funcional | Interface gráfica no LCD                         | O Display LCD deve apresentar os menus de configuração, o modo ativo do sintetizador e a visualização dos parâmetros selecionados. |
+| RF5 | Funcional | Emissão de Áudio via PWM                         | O áudio sintetizado deve ser emitido via PWM por hardware acoplado ao Buzzer ou saída física de áudio. |
+| RN1 | Não-funcional | Latência baixa e determinismo                    | O tempo de resposta entre qualquer entrada do usuário e a mudança na saída de áudio não deve ser perceptível (< 20 ms). |
+| RN2 | Não-funcional | Audio com mínima fidelidade ao instrumento real  | A alimentação dos buffers do periférico de PWM deve ser realizada via DMA para descarregar a CPU e eliminar atrasos (jitter). |
+| RN3 | Não-funcional | Varredura assíncrona e debounce                  | A leitura das entradas do teclado matricial deve possuir tratamento de debounce e ser realizada de forma não-bloqueante.|
+| RN4 | Não-funcional | Exibição visual do volume de saída pela Led Bar  | A Led Bar do kit deve exibir uma quantidade crescente de luzes baseada no quão alto é o som sintetizado. |
 
+## Working Principle
+
+An instrument is characterized by its timbre and its amplitude modulation. The timbre can be achieved via a backwards Fourier Transform of its harmonic components. We have used the [PFFFT](https://github.com/marton78/pffft/tree/master) library to run the fourier transform and compute a LUT for each instrument defined.
+According to the base frequency of the note, the synthesizer computes the correct phase for each moment and indexes the LUT accordingly.
+
+The other main component of the instrument is it's amplitude envelope. This envelope is usually called the ADSR envelope (Attack, Decay, Sustain, Release). The Attack of a note is the time it takes to go from 0 to its full amplitude. Decay is the time for the amplitude to go from the max to its sustain amplitude. In the sustain stage it remains with constant amplitude until the key is released. And the Release time is how long it takes to go from the sustain level to 0 when a key is released. A piano, for example, has near zero attack time, long decay, near zero sustain level (or even zero) and somewhat quick release (longer than attack, way quicker than decay)
+A violin on the other hand has a somewhat slow attack time (and inversely proportional to the key speed), zero decay, 100% sustain, and quick release.
+
+Aside from the synthesis principles, we use the ALSA Linux library to interface with the systems sound output and MIDI input. But all the actual sound is produced in this project.
 ## Installation and Use
 
 ### Linux System
@@ -38,7 +50,9 @@ If using a MIDI keyboard, check the program output for instructions on routing t
 
 ### Running on Windows via WSL
 
-The program can be executed in Windows via WSL2 with WSLg enabled, though for MIDI keyboard support you will need to recompile the linux kernel with some additional features and install usbipd on your windows system.
+Be aware that the synthesizer will most likely lag after running for a bit due to it being virtualized inside the WSL. This is not really recommended, but it's a good way to test it and develop it in a Windows system.
+
+The program can be executed in Windows via WSL2 with WSLg enabled, though for MIDI keyboard support you will need to recompile the linux kernel with some additional features and install usbipd on your Windows system.
 To just run the program without MIDI support, simply follow the [Linux System](#linux-system) guide.
 
 To enable MIDI in WSL2 you will need first to download and recompile the linux kernel with the provided `wslKernelConfig` file at the root of the repository. Inside your WSL execute:
@@ -81,4 +95,17 @@ make configure
 make run
 ```
 
-And the program should be running with now errors on the MIDI thread.
+And the program should be running with now errors on the MIDI thread. If the `make wslConfig` command generate an error about a module not being present, go back to the kernel folder and execute again `make modules_install`. If that doesn't work, check if the version given by `uname -r` matches the folder where it is looking for the module, you might be using the wrong kernel build.
+
+
+Now on a Windows *admin* terminal execute the following to add and share your MIDI device to the wsl
+````shell
+winget install usbipd
+# The above command must be executed only once; restart your terminal to take effect
+# The command below will list the usb devices
+usbipd list
+usbipd bind --usbid XX-YY # Replace XX-YY with the ID of your device shown in the list command
+usbipd attach --wsl --busid XX-YY # Replace XX-YY with the ID of your device shown in the list command
+````
+
+Now execute the procSynth (`make run`). In its therminal it will show instructions to route your MIDI device (`aconnecet -l` and `aconnect XX YY` where XX and YY are the ids seen on the first command of your device and procSynth) 

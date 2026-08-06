@@ -100,8 +100,13 @@ void synth() {
 
 	build_wavetable(&PianoTimbre_Preset);
 	build_wavetable(&ViolinTimbre_Preset);
-	
-
+	build_wavetable(&TromboneTimbre_Preset);
+	build_wavetable(&GuitarTimbre_Preset);
+	build_wavetable(&ClarinetTimbre_Preset);
+	build_wavetable(&HarpTimbre_Preset);
+	build_wavetable(&OrganTimbre_Preset);
+	build_wavetable(&DrumTimbre_Preset);
+	build_wavetable(&BassTimbre_Preset);
 
 	print_formated("Wavetables built; Buffer Size = %lu; Period Size = %lu\n", buffer_size, period_size);
 

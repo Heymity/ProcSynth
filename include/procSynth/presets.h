@@ -21,15 +21,23 @@ extern "C" {
 
 extern const Envelope PianoEnvelope_Preset;
 extern const Envelope ViolinEnvelope_Preset;
+extern const Envelope GuitarEnvelope_Preset;
 extern const Envelope TromboneEnvelope_Preset;
-
-
-
+extern const Envelope ClarinetEnvelope_Preset;
+extern const Envelope HarpEnvelope_Preset;
+extern const Envelope OrganEnvelope_Preset;
+extern const Envelope DrumEnvelope_Preset;
+extern const Envelope BassEnvelope_Preset;
 
 extern Timbre PianoTimbre_Preset;
 extern Timbre ViolinTimbre_Preset;
+extern Timbre GuitarTimbre_Preset;
 extern Timbre TromboneTimbre_Preset;
-
+extern Timbre ClarinetTimbre_Preset;
+extern Timbre HarpTimbre_Preset;
+extern Timbre OrganTimbre_Preset;
+extern Timbre DrumTimbre_Preset;
+extern Timbre BassTimbre_Preset;
 
 #ifdef __cplusplus
   }
