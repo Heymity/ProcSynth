@@ -21,9 +21,15 @@ extern "C" {
 
 extern const Envelope PianoEnvelope_Preset;
 extern const Envelope ViolinEnvelope_Preset;
+extern const Envelope TromboneEnvelope_Preset;
+
+
+
 
 extern Timbre PianoTimbre_Preset;
 extern Timbre ViolinTimbre_Preset;
+extern Timbre TromboneTimbre_Preset;
+
 
 #ifdef __cplusplus
   }
