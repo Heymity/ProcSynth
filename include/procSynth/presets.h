@@ -4,6 +4,11 @@
 
 #ifndef PRESETS_H
 #define PRESETS_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <procSynth/voice.h>
 
 #define NOTE_A4 440
@@ -19,5 +24,9 @@ extern const Envelope ViolinEnvelope_Preset;
 
 extern Timbre PianoTimbre_Preset;
 extern Timbre ViolinTimbre_Preset;
+
+#ifdef __cplusplus
+  }
+#endif
 
 #endif //PRESETS_H

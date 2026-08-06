@@ -11,7 +11,9 @@ endif
 # Options: x86_64, x86, rpi3
 TARGET_ARCH ?= $(HOST_ARCH)
 
-CFLAGS = -I./include -I./external/pffft/include/pffft -Wall -Wextra -O3
+CFLAGS := -I./include -I./external/pffft/include/pffft -I./external -Wall -Wextra -O3
+CXXFLAGS := -Wall -Wextra -O3 -std=c++17
+CPPFLAGS := -I./include -I./external/pffft/include/pffft -I./external
 
 # 3. SET COMPILER AND FLAGS BASED ON ARCHITECTURE
 ifeq ($(TARGET_ARCH),rpi3)
@@ -55,8 +57,9 @@ endif
 
 # 5. BUILD RULES
 TARGET := build/program_$(TARGET_ARCH)$(EXE_EXT)
-SRCS   := src/main.c src/synth.c src/voice.c src/presets.c external/pffft/src/pffft.c external/pffft/src/pffft_common.c src/utils.c src/io.c
-OBJS   := $(addprefix build/,$(SRCS:.c=.o))
+SRCS   := src/main.c src/synth.c src/voice.c src/presets.c external/pffft/src/pffft.c external/pffft/src/pffft_common.c src/utils.c src/io.cpp
+TMP	   := $(SRCS:.cpp=.o)
+OBJS   := $(addprefix build/,$(TMP:.c=.o))
 
 .PHONY: all clean configure wslConfig run
 
@@ -64,20 +67,29 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	@mkdir -p $(@D)
-	$(CC) $(OBJS) -o $@ -lasound -pthread -lm
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ -lasound -pthread -lm -lwiringPi
 
 build/%.o: %.c
 	@mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "CC " $<
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-configure:
-	sudo apt-get install libasound2-dev
+build/%.o: %.cpp
+	@mkdir -p $(@D)
+	@echo "CXX " $<
+	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) -c $< -o $@
 
 run: all
-	./$(TARGET)
+	@./$(TARGET)
 
 clean:
 	$(RM) build/**/*.o $(TARGET)
+
+configure:
+	git submodule update --init --recursive
+	cd external/WiringPi && sed -i 's/\r$///' build && ./build
+	sudo apt-get install libasound2-dev
+
 
 wslConfig:
 	sudo modprobe snd-usb-audio

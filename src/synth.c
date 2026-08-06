@@ -82,6 +82,7 @@ void release_key(int voice_number) {
 }
 
 void* start_synth_thread(void* _) {
+	(void)_; // Suppress unused param warning
 	print_formated("Initializing synth thread\n");
 	synth();
 	print_formated("Synth thread ended abruptly for no apparent reason\n");
