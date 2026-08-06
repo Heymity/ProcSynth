@@ -10,6 +10,7 @@
 #define VOICES_NUM 100
 
 static Voice voices[VOICES_NUM] = {};
+static snd_pcm_uframes_t buffer_size, period_size;
 
 static void write_buffer(snd_pcm_t* playback_handle, const short * buffer, const long length) {
 	snd_pcm_sframes_t frames_written = snd_pcm_writei(playback_handle, buffer, length);
@@ -40,7 +41,7 @@ static int open_and_configure_interface(snd_pcm_t** playback_handle) {
 							 CHANNELS,
 							 SAMPLE_RATE,
 							 1,			// Allow software resampling
-							 20000); // 20ms latency for real time
+							 60000); // 20ms latency for real time
 	if (err < 0) {
 		fprintf(stderr, "Playback configuration error: %s\n", snd_strerror(err));
 		snd_pcm_close(*playback_handle);
@@ -95,17 +96,19 @@ void synth() {
 	if (open_and_configure_interface(&playback_handle) != 0)
 		return;
 
+	snd_pcm_get_params(playback_handle, &buffer_size, &period_size);
+
 	build_wavetable(&PianoTimbre_Preset);
 	build_wavetable(&ViolinTimbre_Preset);
 
-	print_formated("Wavetables built\n");
+	print_formated("Wavetables built; Buffer Size = %lu; Period Size = %lu\n", buffer_size, period_size);
 
 	for (int i = 1; i < VOICES_NUM; i++) {
 		reset_voice(&voices[i]);
 		voices[i].voiceNumber = i;
 	}
 
-	const int total_frames = 256;
+	const int total_frames = period_size;
 	short *buffer = malloc(total_frames * CHANNELS * sizeof(short));
 	short *loc_buffer = malloc(total_frames * CHANNELS * sizeof(short));
 
@@ -120,12 +123,7 @@ void synth() {
 		for (int i = 0; i < VOICES_NUM; i++) {
 			if (!voices[i].active) continue;
 
-			synth_voice(&voices[i], loc_buffer, total_frames * CHANNELS);
-
-			for (int k = 0; k < total_frames * CHANNELS; k++) {
-				if (buffer[k] + loc_buffer[k] > MAX_VOLUME) buffer[k] = MAX_VOLUME;
-				else buffer[k] = (short)(buffer[k] + loc_buffer[k]);
-			}
+			synth_voice(&voices[i], buffer, total_frames * CHANNELS);
 		}
 
 		write_buffer(playback_handle, buffer, total_frames);

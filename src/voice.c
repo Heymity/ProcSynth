@@ -142,8 +142,8 @@ void synth_voice(Voice* v, short* output_buffer, const int buffer_size) {
 		if (v->cumulative_phase >= 2.0 * M_PI)
 			v->cumulative_phase -= 2.0 * M_PI;
 
-		output_buffer[i * 2] = sample;     // Left channel
-		output_buffer[i * 2 + 1] = sample; // Right channel
+		output_buffer[i * 2] += (short)sample;     // Left channel
+		output_buffer[i * 2 + 1] += (short)sample; // Right channel
 
 		v->time += deltaT;
 	}

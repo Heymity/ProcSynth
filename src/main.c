@@ -54,7 +54,7 @@ int main() {
 	}
 	print_formated("MIDI input thread created \n");
 
-	sleep(1);
+	sleep(3);
 
 	print_formated("Pressing C major chord for 1s as Piano for test \n");
 	int voiceC = press_key(NOTE_C4, 10000, PianoEnvelope_Preset, PianoTimbre_Preset);

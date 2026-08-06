@@ -44,8 +44,8 @@ void * midi_thread_func(void * _) {
 	memset(noteToVoice, 0, sizeof(noteToVoice));
 
 	while (snd_seq_event_input(seq_handle, &ev) >= 0) {
-		print_formated("Note: %d - Vel: %d - Tag: %c - Type: %d\n", ev->data.note.note, ev->data.note.velocity, ev->tag, ev->type);
 		if (ev->type == SND_SEQ_EVENT_NOTEON) {
+			//print_formated("Note: %d - Vel: %d - Tag: %c - Type: %d\n", ev->data.note.note, ev->data.note.velocity, ev->tag, ev->type);
 			const int note = ev->data.note.note;
 			const int velocity = ev->data.note.velocity;
 
@@ -60,9 +60,10 @@ void * midi_thread_func(void * _) {
 			}
 		}
 		else if (ev->type == SND_SEQ_EVENT_NOTEOFF) {
+			//print_formated("Note: %d - Vel: %d - Tag: %c - Type: %d\n", ev->data.note.note, ev->data.note.velocity, ev->tag, ev->type);
 			release_key(noteToVoice[ev->data.note.note]);
 		} else if (ev->type == SND_SEQ_EVENT_PGMCHANGE) {
-			print_formated("Value: %d", ev->data.control.value);
+			//print_formated("Value: %d\n", ev->data.control.value);
 			internalVolume =  ev->data.control.value;
 		}
 
