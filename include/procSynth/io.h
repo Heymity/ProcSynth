@@ -11,7 +11,8 @@ extern "C" {
 
 void * midi_thread_func(void* _);
 
-void * io_thread(void * _);
+__attribute__((noreturn)) void * io_thread(void * _);
+__attribute__((noreturn)) void* ultrasonic_thread(void* _);
 
 #ifdef __cplusplus
   }

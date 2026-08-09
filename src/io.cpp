@@ -2,37 +2,33 @@
 // Created by GABRIEL on 03/08/2026.
 //
 
-#include <procSynth/io.h>
+#include <Freenove/MatrixKeypad/include/Keypad.hpp>
 #include <alsa/asoundlib.h>
-#include <pthread.h>
 #include <cmath>
+#include <procSynth/io.h>
 #include <procSynth/synth.h>
-
+#include <sys/time.h>
+#include <wiringPi.h>
 #include "procSynth/presets.h"
 #include "procSynth/utils.h"
 #include "procSynth/voice.h"
-#include <wiringPi.h>
 
-#include <Freenove/MatrixKeypad/include/Keypad.hpp>
+#define TRIG_PIN 14
+#define ECHO_PIN 15
+#define MAX_DISTANCE 220
+#define TIMEOUT (MAX_DISTANCE * 60)
+#define THEREMIN_CUTOFF_DISTANCE 180.0
 
-constexpr byte KEYPADROWS = 4;
-constexpr byte KEYPADCOLS = 4;
-char keypadkeys[KEYPADROWS][KEYPADCOLS] = {
-  {'1','2','3','A'},
-  {'4','5','6','B'},
-  {'7','8','9','C'},
-  {'*','0','#','D'}
-};
-static byte KeypadRowPins[KEYPADROWS] = {16, 20, 21, 26};
-static byte KeypadColPins[KEYPADCOLS] = {19, 13, 6, 5};
-static auto keypad = Keypad( makeKeymap(keypadkeys), KeypadRowPins, KeypadColPins, KEYPADROWS, KEYPADCOLS );
+static void handle_keypad_matrix (char key);
+
+/*
+ *  MIDI CODE
+ */
 
 static Envelope midi_envelope;
 static Timbre midi_timbre;
 
-void handle_keypad_matrix (char key);
-
-void *midi_thread_func(void *_) {
+void* midi_thread_func(void *_) {
 	(void) _; // Suppress unused param warning
 	print_formated("Initializing MIDI Input thread\n");
 	snd_seq_t *seq_handle;
@@ -94,20 +90,47 @@ void *midi_thread_func(void *_) {
 	return nullptr;
 }
 
-[[noreturn]] void * io_thread(void * _) {
+/*
+ *	GENERAL IO CODE
+ */
+
+constexpr unsigned char KEYPADROWS = 4;
+constexpr unsigned char KEYPADCOLS = 4;
+static char keypadkeys[KEYPADROWS][KEYPADCOLS] = {
+	{'1','2','3','A'},
+	{'4','5','6','B'},
+	{'7','8','9','C'},
+	{'*','0','#','D'}
+};
+static unsigned char KeypadRowPins[KEYPADROWS] = {16, 20, 21, 26};
+static unsigned char KeypadColPins[KEYPADCOLS] = {19, 13, 6, 5};
+static auto keypad = Keypad( makeKeymap(keypadkeys), KeypadRowPins, KeypadColPins, KEYPADROWS, KEYPADCOLS );
+
+static float theremin_low_freq = 0.0;
+static float theremin_high_freq = 0.0;
+static short theremin_volume = 0;
+
+__attribute__((noreturn)) void* io_thread(void * _) {
 	(void) _;
 	
-	print_formated("Initializing MIDI Input thread\n");
-    wiringPiSetupGpio();
+	print_formated("Initializing IO thread\n");
 	keypad.setDebounceTime(50);
-	
+
+	int _fd_ADC = detectI2C(0x48);
+	if (_fd_ADC < 0)
+		print_formated("Error initializing ADC\n");
+
 	while (true) {
 		if (const char key = keypad.getKey()) {
 			handle_keypad_matrix(key);
 		}
+
+		if (_fd_ADC > 0) {
+			theremin_volume = MAX_VOLUME * static_cast<float>(read_analog(_fd_ADC, 0)) / 255.0f;
+			theremin_low_freq = static_cast<float>(read_analog(_fd_ADC, 1)) / 255.0f;
+			theremin_high_freq = static_cast<float>(read_analog(_fd_ADC, 2)) / 255.0f;
+		}
 	}
-	
-	return nullptr;
 }
 
 void handle_keypad_matrix (const char key) {
@@ -153,7 +176,71 @@ void handle_keypad_matrix (const char key) {
 			midi_timbre = PianoTimbre_Preset;
 			break;
 	}
-	
-		
+}
+
+/*
+ *	ULTRASONIC SENSOR
+ */
+
+static int pulseIn(int pin, int level, int timeout)
+{
+	timeval tn{}, t0{}, t1{};
+	gettimeofday(&t0, nullptr);
+	long micros = 0;
+	while (digitalRead(pin) != level)
+	{
+		gettimeofday(&tn, nullptr);
+		if (tn.tv_sec > t0.tv_sec) micros = 1000000L; else micros = 0;
+		micros += (tn.tv_usec - t0.tv_usec);
+		if (micros > timeout) return 0;
+	}
+	gettimeofday(&t1, nullptr);
+	while (digitalRead(pin) == level)
+	{
+		gettimeofday(&tn, nullptr);
+		if (tn.tv_sec > t0.tv_sec) micros = 1000000L; else micros = 0;
+		micros = micros + (tn.tv_usec - t0.tv_usec);
+		if (micros > timeout) return 0;
+	}
+	if (tn.tv_sec > t1.tv_sec) micros = 1000000L; else micros = 0;
+	micros = micros + (tn.tv_usec - t1.tv_usec);
+	return static_cast<int>(micros);
+}
+static float getSonar() {
+	digitalWrite(TRIG_PIN,HIGH);
+	delayMicroseconds(10);
+	digitalWrite(TRIG_PIN,LOW);
+	long pingTime = pulseIn(ECHO_PIN, HIGH, TIMEOUT);
+	float distance = static_cast<float>(pingTime) * 340.0f / 2.0f / 10000.0f;
+	return distance;
+}
+
+__attribute__((noreturn)) void* ultrasonic_thread(void* _) {
+	(void)_;
+
+	print_formated("Initializing Ultrasonic sensor thread\n");
+
+	float distance_filtered = 0;
+	int theremin_voice = -1;
+	while (true) {
+		float d = getSonar();
+		if (d <= 0 || d > MAX_DISTANCE) d = distance_filtered;
+
+		float alpha = 0.3f;
+		distance_filtered = (1 - alpha) * distance_filtered + alpha * d;	// Basic Low Pass IIR filter
+
+		if (distance_filtered > THEREMIN_CUTOFF_DISTANCE) {
+			release_key(theremin_voice);
+			theremin_voice = -1;
+			continue;
+		}
+
+		double freq = theremin_low_freq + (distance_filtered / THEREMIN_CUTOFF_DISTANCE) * (theremin_high_freq - theremin_low_freq);
+
+		if (theremin_voice == -1)
+			theremin_voice = press_key(freq, theremin_volume, OrganEnvelope_Preset, OrganTimbre_Preset);
+
+		update_voice(theremin_voice, freq, theremin_volume);
+	}
 }
 

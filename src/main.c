@@ -8,9 +8,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <wiringPi.h>
+
+#include <procSynth/io.h>
 #include "procSynth/presets.h"
 #include "procSynth/utils.h"
-#include <procSynth/io.h>
 
 
 static char hello_msg[] =	"\n	░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░\n"
@@ -22,6 +24,9 @@ static char hello_msg[] =	"\n	░░░░░░░░░░░░░░░░�
 int main() {
 	//system("clear");
 	printf("%s\n\n", hello_msg);
+
+	wiringPiSetup();
+	wiringPiSetupGpio();
 
 	ThreadsId[0] = pthread_self();
 	ThreadsNames[0] = "Main Thread";
@@ -60,6 +65,13 @@ int main() {
 		return 1;
 	}
 	print_formated("IO thread created \n");
+
+	ThreadsNames[4] = "Ultrasonic Thread";
+	if (pthread_create(&ThreadsId[4], NULL, ultrasonic_thread, NULL) != 0) {
+		print_formated("Error creating Ultrasonic thread. Aborting... \n");
+		return 1;
+	}
+	print_formated("Ultrasonic thread created \n");
 
 	sleep(3);
 

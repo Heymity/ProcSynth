@@ -35,7 +35,6 @@
 #include <wiringPi.h>
 
 #define boolean bool
-#define byte unsigned char 
 #define OPEN LOW
 #define CLOSED HIGH
 

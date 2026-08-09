@@ -18,6 +18,7 @@ void * start_synth_thread(void*);
 void synth();
 
 int press_key(double frequency, short amplitude, Envelope envelope, Timbre timbre);
+void update_voice(int voice, double frequency, short amplitude);
 void release_key(int voice_number);
 
 

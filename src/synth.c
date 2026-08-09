@@ -51,7 +51,7 @@ static int open_and_configure_interface(snd_pcm_t** playback_handle) {
 	return 0;
 }
 
-int find_free_voice() {
+static int find_free_voice() {
 	for (int i = 0; i < VOICES_NUM; i++) {
 		if (!voices[i].active)
 			return i;
@@ -75,6 +75,14 @@ int press_key(double frequency, short amplitude, Envelope envelope, Timbre timbr
 	};
 
 	return v_index;
+}
+
+void update_voice(int voice, double frequency, short amplitude) {
+	if (voice < 0 || voice >= VOICES_NUM) return;
+	if (!voices[voice].active) return;
+
+	voices[voice].frequency = frequency;
+	voices[voice].baseAmplitude = amplitude;
 }
 
 void release_key(int voice_number) {

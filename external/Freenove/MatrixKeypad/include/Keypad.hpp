@@ -43,7 +43,6 @@
 
 #include "Key.hpp"
 #include <wiringPi.h>
-#include <stdio.h>
 
 //#define NULL 			'\0'
 #define INPUT_PULLUP	0x02
@@ -58,10 +57,10 @@ typedef unsigned int uint;
 typedef unsigned long ulong;
 
 // Made changes according to this post http://arduino.cc/forum/index.php?topic=58337.0
-// by Nick Gammon. Thanks for the input Nick. It actually saved 78 bytes for me. :)
+// by Nick Gammon. Thanks for the input Nick. It actually saved 78 unsigned chars for me. :)
 typedef struct {
-    byte rows;
-    byte columns;
+    unsigned char rows;
+    unsigned char columns;
 } KeypadSize;
 
 #define LIST_MAX 10		// Max number of keys on the active list.
@@ -73,7 +72,7 @@ typedef struct {
 class Keypad : public Key {
 public:
 
-	Keypad(char *userKeymap, byte *row, byte *col, byte numRows, byte numCols);
+	Keypad(char *userKeymap, unsigned char *row, unsigned char *col, unsigned char numRows, unsigned char numCols);
 
 	uint bitMap[MAPSIZE];	// 10 row x 16 column array of bits. Except Due which has 32 columns.
 	Key key[LIST_MAX];
@@ -91,13 +90,13 @@ public:
 	int findInList(int keyCode);
 	char waitForKey();
 	bool keyStateChanged();
-	byte numKeys();
+	unsigned char numKeys();
 
 private:
 	unsigned long startTime;
 	char *keymap;
-    byte *rowPins;
-    byte *columnPins;
+    unsigned char *rowPins;
+    unsigned char *columnPins;
 	KeypadSize sizeKpd;
 	uint debounceTime;
 	uint holdTime;
@@ -105,15 +104,15 @@ private:
 
 	void scanKeys();
 	bool updateList();
-	void nextKeyState(byte n, boolean button);
-	void transitionTo(byte n, KeyState nextState);
+	void nextKeyState(unsigned char n, boolean button);
+	void transitionTo(unsigned char n, KeyState nextState);
 	void (*keypadEventListener)(char);
 };
 
 //#define __PIN_MODE__PINWRITE__PINREAD__
-void pin_mode(byte pinNum, byte mode);
-void pin_write(byte pinNum, boolean level);
-int  pin_read(byte pinNum); 
+void pin_mode(unsigned char pinNum, unsigned char mode);
+void pin_write(unsigned char pinNum, boolean level);
+int  pin_read(unsigned char pinNum); 
 #endif
 
 /*
