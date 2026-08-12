@@ -12,12 +12,27 @@
 #include "procSynth/presets.h"
 #include "procSynth/utils.h"
 #include "procSynth/voice.h"
+#include <pcf8574.h>
+#include <lcd.h>
 
 #define TRIG_PIN 14
 #define ECHO_PIN 15
 #define MAX_DISTANCE 220
 #define TIMEOUT (MAX_DISTANCE * 60)
 #define THEREMIN_CUTOFF_DISTANCE 180.0
+
+int pcf8574_address = 0x27;
+#define BASE 64
+#define RS      (BASE+0)
+#define RW      (BASE+1)
+#define EN      (BASE+2)
+#define LED     (BASE+3)
+#define D4      (BASE+4)
+#define D5      (BASE+5)
+#define D6      (BASE+6)
+#define D7      (BASE+7)
+
+static int lcdHd;
 
 static void handle_keypad_matrix (char key);
 
@@ -120,6 +135,28 @@ __attribute__((noreturn)) void* io_thread(void * _) {
 	if (_fd_ADC < 0)
 		print_formated("Error initializing ADC\n");
 
+	if(detectI2C(0x27)) pcf8574_address = 0x27;
+	else if(detectI2C(0x3F)) pcf8574_address = 0x3F;
+	else print_formated("No correct I2C address found, please use command 'i2cdetect -y 1' to check the I2C address! \n");
+
+	pcf8574Setup(BASE,pcf8574_address);
+	for(int i = 0; i < 8; i++){
+		pinMode(BASE+i,OUTPUT);
+	}
+
+	digitalWrite(LED,HIGH);     //turn on LCD backlight
+	digitalWrite(RW,LOW);       //allow writing to LCD
+	lcdHd = lcdInit(2,16,4,RS,EN,D4,D5,D6,D7,0,0,0,0);// initialize LCD and return “handle” used to handle LCD
+	if(lcdHd == -1)
+		print_formated("lcdInit failed.\n");
+
+	lcdPosition(lcdHd,0,0);
+	lcdPrintf(lcdHd,"Hello!");
+	lcdPosition(lcdHd,0,1);
+	lcdPrintf(lcdHd,"ProcSynth");
+
+	sleep(1);
+
 	while (true) {
 		if (const char key = keypad.getKey()) {
 			handle_keypad_matrix(key);
@@ -127,53 +164,66 @@ __attribute__((noreturn)) void* io_thread(void * _) {
 
 		if (_fd_ADC > 0) {
 			theremin_volume = MAX_VOLUME * static_cast<float>(read_analog(_fd_ADC, 0)) / 255.0f;
-			theremin_low_freq = static_cast<float>(read_analog(_fd_ADC, 1)) / 255.0f;
-			theremin_high_freq = static_cast<float>(read_analog(_fd_ADC, 2)) / 255.0f;
+			theremin_low_freq = static_cast<float>(NOTE_A4/4.0 * pow(2, 2.0*static_cast<float>(read_analog(_fd_ADC, 1)) / 255.0f));
+			theremin_high_freq = static_cast<float>(NOTE_A4/1.0 * pow(2, 2.0*static_cast<float>(read_analog(_fd_ADC, 2)) / 255.0f));
 		}
 	}
 }
 
 void handle_keypad_matrix (const char key) {
+	lcdPosition(lcdHd,0,0);
+	lcdPrintf(lcdHd,"Current Instrument:");
+	lcdPosition(lcdHd,0,1);
 	switch(key){
 		case '1':
 			midi_envelope = PianoEnvelope_Preset;
 			midi_timbre = PianoTimbre_Preset;
+			lcdPrintf(lcdHd,"Piano");
 			break;
 		case '2':
 			midi_envelope = ViolinEnvelope_Preset;
 			midi_timbre = ViolinTimbre_Preset;
+			lcdPrintf(lcdHd,"Violin");
 			break;
 		case '3':
 			midi_envelope = GuitarEnvelope_Preset;
 			midi_timbre = GuitarTimbre_Preset;
+			lcdPrintf(lcdHd,"Guitar");
 			break;
 		case '4':
 			midi_envelope = TromboneEnvelope_Preset;
 			midi_timbre = TromboneTimbre_Preset;
+			lcdPrintf(lcdHd,"Trombone");
 			break;
 		case '5':
 			midi_envelope = ClarinetEnvelope_Preset;
 			midi_timbre = ClarinetTimbre_Preset;
+			lcdPrintf(lcdHd,"Clarinet");
 			break;
 		case '6':
 			midi_envelope = HarpEnvelope_Preset;
 			midi_timbre = HarpTimbre_Preset;
+			lcdPrintf(lcdHd,"Harp");
 			break;
 		case '7':
 			midi_envelope = OrganEnvelope_Preset;
 			midi_timbre = OrganTimbre_Preset;
+			lcdPrintf(lcdHd,"Organ");
 			break;
 		case '8':
 			midi_envelope = DrumEnvelope_Preset;
 			midi_timbre = DrumTimbre_Preset;
+			lcdPrintf(lcdHd,"Drum");
 			break;
 		case '9':
 			midi_envelope = BassEnvelope_Preset;
 			midi_timbre = BassTimbre_Preset;
+			lcdPrintf(lcdHd,"Bass");
 			break;
 		default:
 			midi_envelope = PianoEnvelope_Preset;
 			midi_timbre = PianoTimbre_Preset;
+			lcdPrintf(lcdHd,"Piano");
 			break;
 	}
 }
