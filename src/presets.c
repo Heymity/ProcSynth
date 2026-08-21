@@ -176,3 +176,23 @@ Timbre BassTimbre_Preset = (Timbre) {
     .harmonic_weights = {1.0, 0.85, 0.50, 0.25, 0.10, 0.05, 0.02, 0.01}
 };
 
+// ==========================================
+// Theremin
+// ==========================================
+const Envelope ThereminEnvelope_Preset = (Envelope) {
+    .attack_time = 0.001,
+    .attack_overshoot = 0,
+    .decay_time = 0.01,
+    .sustain_level = 1.0,
+    .release_time = 0.01,
+    .envelopeMultiplier = 1.0,
+    .decay_type = LINEAR_DECAY,
+    .release_start_multiplier = 0.0,
+    .sustain_end_time = 0.0,
+};
+
+Timbre ThereminTimbre_Preset = (Timbre) {
+    .num_harmonics = 8,
+    .harmonic_weights = {1.0, 0.0 ,0.0, 0.0, 0.0, 0.0, 0.0, 0.0}
+};
+

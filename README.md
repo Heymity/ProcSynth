@@ -5,11 +5,19 @@
 3. [Working Principle](#working-principle)
 4. [Installation and Use](#installation-and-use)
 
-## Definição e motivação
+## Definição e motivação (PT-BR)
 
 ProcSynth é um sintetizador de sons baseado no instrumento Theremin. Diferente de seu predecessor, qu um dispositivo que cria sons baseado na capacitância dos objetos próximos ao seu sensor. Já o ProSynth utiliza um sensor de distância para determinar a frequência do som que irá produzir. O objetivo desse desenvolvimento é gerar uma prova de conceito funcional que exercita os conteúdos aprendidos e praticados durante os experimentos da matéria de Laboratório de Processadores.
 
-## Requisitos do projeto
+[Vídeo demonstrativo](https://www.youtube.com/watch?v=lAhP2kJ4F-w)
+
+## Definition and Motivation (EN)
+
+ProcSynth is a sound synthesizer based on the Theremin instrument. Unlike its predecessor, which is a device that generates sounds based on the capacitance of objects near its sensor, ProcSynth uses a distance sensor to determine the frequency of the sound it will produce. The goal of this development is to create a functional proof of concept that applies the concepts learned and practiced throughout the experiments in the Processor Laboratory course.
+
+[Demo Video](https://www.youtube.com/watch?v=lAhP2kJ4F-w)
+
+## Requisitos do projeto (PT-BR only)
 
 | Id | Tipo | Nome                                             | Descrição |
 | --- | --- |--------------------------------------------------| --- |
@@ -23,7 +31,21 @@ ProcSynth é um sintetizador de sons baseado no instrumento Theremin. Diferente 
 | RN3 | Não-funcional | Varredura assíncrona e debounce                  | A leitura das entradas do teclado matricial deve possuir tratamento de debounce e ser realizada de forma não-bloqueante.|
 | RN4 | Não-funcional | Exibição visual do volume de saída pela Led Bar  | A Led Bar do kit deve exibir uma quantidade crescente de luzes baseada no quão alto é o som sintetizado. |
 
-## Working Principle
+## Principio de Funcionamento (PT-BR)
+
+Um instrumento é caracterizado por seu timbre e sua modulação de amplitude. O timbre pode ser obtido por meio de uma Transformada Inversa de Fourier de seus componentes harmônicos. Utilizamos a biblioteca [PFFFT](https://github.com/marton78/pffft/tree/master) para executar a transformada de Fourier e calcular uma LUT para cada instrumento definido.
+
+De acordo com a frequência fundamental da nota, o sintetizador calcula a fase correta para cada instante e utiliza o índice correspondente na LUT.
+
+O outro componente principal do instrumento é o seu envelope de amplitude. Esse envelope é geralmente chamado de envelope ADSR (Attack, Decay, Sustain, Release). O Attack de uma nota é o tempo necessário para que ela passe de 0 até sua amplitude máxima. O Decay é o tempo necessário para que a amplitude passe do valor máximo até seu nível de sustain. Durante a etapa de Sustain, a amplitude permanece constante até que a tecla seja solta. Já o Release é o tempo necessário para que a amplitude passe do nível de sustain até 0 após a tecla ser solta.
+
+Um piano, por exemplo, possui um tempo de attack próximo de zero, um decay longo, um nível de sustain próximo de zero (ou até mesmo zero) e um release relativamente rápido (mais longo que o attack, mas muito mais rápido que o decay).
+
+Um violino, por outro lado, possui um tempo de attack relativamente lento (e inversamente proporcional à velocidade com que a tecla é pressionada), decay zero, sustain de 100% e release rápido.
+
+Além dos princípios de síntese, utilizamos a biblioteca ALSA do Linux para fazer a interface com a saída de áudio e a entrada MIDI do sistema. No entanto, toda a geração do som é realizada neste projeto.
+
+## Working Principle (EN)
 
 An instrument is characterized by its timbre and its amplitude modulation. The timbre can be achieved via a backwards Fourier Transform of its harmonic components. We have used the [PFFFT](https://github.com/marton78/pffft/tree/master) library to run the fourier transform and compute a LUT for each instrument defined.
 According to the base frequency of the note, the synthesizer computes the correct phase for each moment and indexes the LUT accordingly.
@@ -32,7 +54,9 @@ The other main component of the instrument is it's amplitude envelope. This enve
 A violin on the other hand has a somewhat slow attack time (and inversely proportional to the key speed), zero decay, 100% sustain, and quick release.
 
 Aside from the synthesis principles, we use the ALSA Linux library to interface with the systems sound output and MIDI input. But all the actual sound is produced in this project.
+
 ## Installation and Use
+
 
 ### Linux System
 

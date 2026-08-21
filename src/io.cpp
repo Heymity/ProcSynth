@@ -9,6 +9,7 @@
 #include <procSynth/synth.h>
 #include <sys/time.h>
 #include <wiringPi.h>
+#include <wiringPiI2C.h>
 #include "procSynth/presets.h"
 #include "procSynth/utils.h"
 #include "procSynth/voice.h"
@@ -19,7 +20,7 @@
 #define ECHO_PIN 15
 #define MAX_DISTANCE 220
 #define TIMEOUT (MAX_DISTANCE * 60)
-#define THEREMIN_CUTOFF_DISTANCE 180.0
+#define THEREMIN_CUTOFF_DISTANCE 40.0
 
 int pcf8574_address = 0x27;
 #define BASE 64
@@ -163,67 +164,68 @@ __attribute__((noreturn)) void* io_thread(void * _) {
 		}
 
 		if (_fd_ADC > 0) {
-			theremin_volume = MAX_VOLUME * static_cast<float>(read_analog(_fd_ADC, 0)) / 255.0f;
-			theremin_low_freq = static_cast<float>(NOTE_A4/4.0 * pow(2, 2.0*static_cast<float>(read_analog(_fd_ADC, 1)) / 255.0f));
+			theremin_volume = MAX_VOLUME * static_cast<float>(read_analog(_fd_ADC, 4)) / 255.0f;
+			theremin_low_freq = static_cast<float>(NOTE_A4/4.0 * pow(2, 2.0*static_cast<float>(read_analog(_fd_ADC, 3)) / 255.0f));
 			theremin_high_freq = static_cast<float>(NOTE_A4/1.0 * pow(2, 2.0*static_cast<float>(read_analog(_fd_ADC, 2)) / 255.0f));
+			//print_formated("V %d CF %f UF %f\n", theremin_volume, theremin_low_freq, theremin_high_freq);
 		}
 	}
 }
 
 void handle_keypad_matrix (const char key) {
 	lcdPosition(lcdHd,0,0);
-	lcdPrintf(lcdHd,"Current Instrument:");
+	lcdPrintf(lcdHd,"Instrument:");
 	lcdPosition(lcdHd,0,1);
 	switch(key){
 		case '1':
 			midi_envelope = PianoEnvelope_Preset;
 			midi_timbre = PianoTimbre_Preset;
-			lcdPrintf(lcdHd,"Piano");
+			lcdPrintf(lcdHd,"Piano           ");
 			break;
 		case '2':
 			midi_envelope = ViolinEnvelope_Preset;
 			midi_timbre = ViolinTimbre_Preset;
-			lcdPrintf(lcdHd,"Violin");
+			lcdPrintf(lcdHd,"Violin          ");
 			break;
 		case '3':
 			midi_envelope = GuitarEnvelope_Preset;
 			midi_timbre = GuitarTimbre_Preset;
-			lcdPrintf(lcdHd,"Guitar");
+			lcdPrintf(lcdHd,"Guitar          ");
 			break;
 		case '4':
 			midi_envelope = TromboneEnvelope_Preset;
 			midi_timbre = TromboneTimbre_Preset;
-			lcdPrintf(lcdHd,"Trombone");
+			lcdPrintf(lcdHd,"Trombone        ");
 			break;
 		case '5':
 			midi_envelope = ClarinetEnvelope_Preset;
 			midi_timbre = ClarinetTimbre_Preset;
-			lcdPrintf(lcdHd,"Clarinet");
+			lcdPrintf(lcdHd,"Clarinet       ");
 			break;
 		case '6':
 			midi_envelope = HarpEnvelope_Preset;
 			midi_timbre = HarpTimbre_Preset;
-			lcdPrintf(lcdHd,"Harp");
+			lcdPrintf(lcdHd,"Harp          ");
 			break;
 		case '7':
 			midi_envelope = OrganEnvelope_Preset;
 			midi_timbre = OrganTimbre_Preset;
-			lcdPrintf(lcdHd,"Organ");
+			lcdPrintf(lcdHd,"Organ          ");
 			break;
 		case '8':
 			midi_envelope = DrumEnvelope_Preset;
 			midi_timbre = DrumTimbre_Preset;
-			lcdPrintf(lcdHd,"Drum");
+			lcdPrintf(lcdHd,"Drum          ");
 			break;
 		case '9':
 			midi_envelope = BassEnvelope_Preset;
 			midi_timbre = BassTimbre_Preset;
-			lcdPrintf(lcdHd,"Bass");
+			lcdPrintf(lcdHd,"Bass          ");
 			break;
 		default:
 			midi_envelope = PianoEnvelope_Preset;
 			midi_timbre = PianoTimbre_Preset;
-			lcdPrintf(lcdHd,"Piano");
+			lcdPrintf(lcdHd,"Piano          ");
 			break;
 	}
 }
@@ -267,19 +269,20 @@ static float getSonar() {
 
 __attribute__((noreturn)) void* ultrasonic_thread(void* _) {
 	(void)_;
-
+	sleep(3);
 	print_formated("Initializing Ultrasonic sensor thread\n");
 
 	float distance_filtered = 0;
 	int theremin_voice = -1;
 	while (true) {
 		float d = getSonar();
-		if (d <= 0 || d > MAX_DISTANCE) d = distance_filtered;
+		if (d <= 0 || d > MAX_DISTANCE) continue;
 
 		float alpha = 0.3f;
 		distance_filtered = (1 - alpha) * distance_filtered + alpha * d;	// Basic Low Pass IIR filter
 
-		if (distance_filtered > THEREMIN_CUTOFF_DISTANCE) {
+		
+		if (theremin_voice != -1 && distance_filtered > THEREMIN_CUTOFF_DISTANCE) {
 			release_key(theremin_voice);
 			theremin_voice = -1;
 			continue;
@@ -287,9 +290,12 @@ __attribute__((noreturn)) void* ultrasonic_thread(void* _) {
 
 		double freq = theremin_low_freq + (distance_filtered / THEREMIN_CUTOFF_DISTANCE) * (theremin_high_freq - theremin_low_freq);
 
-		if (theremin_voice == -1)
-			theremin_voice = press_key(freq, theremin_volume, OrganEnvelope_Preset, OrganTimbre_Preset);
+		
+		//print_formated("Got sonar, %f, %f, voice %d, freq %f\n",d, distance_filtered, theremin_voice, freq);
 
+		if (theremin_voice == -1 && d < THEREMIN_CUTOFF_DISTANCE - 20) {
+			theremin_voice = press_key(freq, theremin_volume, ThereminEnvelope_Preset, ThereminTimbre_Preset);
+		}
 		update_voice(theremin_voice, freq, theremin_volume);
 	}
 }

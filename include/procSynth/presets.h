@@ -28,6 +28,8 @@ extern const Envelope HarpEnvelope_Preset;
 extern const Envelope OrganEnvelope_Preset;
 extern const Envelope DrumEnvelope_Preset;
 extern const Envelope BassEnvelope_Preset;
+extern const Envelope ThereminEnvelope_Preset;
+extern Timbre ThereminTimbre_Preset;
 
 extern Timbre PianoTimbre_Preset;
 extern Timbre ViolinTimbre_Preset;

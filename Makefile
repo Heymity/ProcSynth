@@ -67,7 +67,7 @@ all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	@mkdir -p $(@D)
-	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ -lasound -pthread -lm -lwiringPi
+	$(CXX) $(CXXFLAGS) $(OBJS) -o $@ -lasound -pthread -lm -lwiringPi -lwiringPiDev
 
 build/%.o: %.c
 	@mkdir -p $(@D)

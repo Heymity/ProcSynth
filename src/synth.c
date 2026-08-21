@@ -79,8 +79,10 @@ int press_key(double frequency, short amplitude, Envelope envelope, Timbre timbr
 
 void update_voice(int voice, double frequency, short amplitude) {
 	if (voice < 0 || voice >= VOICES_NUM) return;
-	if (!voices[voice].active) return;
-
+	//if (!voices[voice].active) return;
+	
+	voices[voice].active = true;
+	voices[voice].pressed = true;
 	voices[voice].frequency = frequency;
 	voices[voice].baseAmplitude = amplitude;
 }
@@ -115,6 +117,7 @@ void synth() {
 	build_wavetable(&OrganTimbre_Preset);
 	build_wavetable(&DrumTimbre_Preset);
 	build_wavetable(&BassTimbre_Preset);
+	build_wavetable(&ThereminTimbre_Preset);
 
 	print_formated("Wavetables built; Buffer Size = %lu; Period Size = %lu\n", buffer_size, period_size);
 
