@@ -1,8 +1,8 @@
 # ProcSynth - Lightweight Synthesizer 
 
-1. [Definition and Motivation](#definição-e-motivação)
-2. [Project Functional and Non-functional Requirements](#requisitos-do-projeto)
-3. [Working Principle](#working-principle)
+1. [Definition and Motivation](#definição-e-motivação-pt-br)
+2. [Project Functional and Non-functional Requirements](#requisitos-do-projeto-pt-br-only)
+3. [Working Principle](#working-principle-en)
 4. [Installation and Use](#installation-and-use)
 
 ## Definição e motivação (PT-BR)
